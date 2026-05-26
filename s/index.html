@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" style="--maxContentWidth: 760px;">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Articles</title>
+  <meta name="description" content="Index of articles by Behnaz Nojavanasghari." />
+  <style>
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-normal.DffTHwTe.woff2) format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-normal.CvMo8Nw_.woff2) format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-italic.DPWrcJIc.woff2) format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-italic.Cxq2NBhc.woff2) format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: "Petrona Fallback";
+      font-style: normal;
+      font-weight: 100 900;
+      src: local("Georgia"), local("Times New Roman"), local("Liberation Serif");
+      size-adjust: 96%;
+      ascent-override: 88.62%;
+      descent-override: 27.89%;
+      line-gap-override: 0%;
+    }
+
+    @font-face {
+      font-family: "Petrona Fallback";
+      font-style: italic;
+      font-weight: 100 900;
+      src: local("Georgia Italic"), local("Times New Roman Italic"), local("Liberation Serif Italic");
+      size-adjust: 87.74%;
+      ascent-override: 97.79%;
+      descent-override: 30.77%;
+      line-gap-override: 0%;
+    }
+
+    :root {
+      --greys-0: #ffffff;
+      --greys-2: #f5f5f5;
+      --greys-3: #f0f0f0;
+      --greys-4: #d9d9d9;
+      --greys-7: #595959;
+      --greys-8-5: #343434;
+      --greys-10: #1f1f1f;
+      --greys-12: #000000;
+      --violets-3: #9775fa;
+      --violets-5: #6741d9;
+
+      --page-background: var(--greys-0);
+      --primary-text-color: var(--greys-12);
+      --secondary-text-color: var(--greys-7);
+      --accent-color: var(--violets-5);
+      --border-color: var(--greys-3);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page-background: var(--greys-10);
+        --primary-text-color: var(--greys-2);
+        --secondary-text-color: var(--greys-4);
+        --accent-color: var(--violets-3);
+        --border-color: var(--greys-8-5);
+      }
+    }
+
+    html,
+    body {
+      font-family: "Petrona Variable", "Petrona Fallback", serif;
+      padding: 0;
+      margin: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background-color: var(--page-background);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      color: var(--primary-text-color);
+    }
+
+    main {
+      max-width: var(--maxContentWidth);
+      width: calc(100vw - 4em);
+      margin-left: 2em;
+      margin-right: 2em;
+      padding-top: 1em;
+      padding-bottom: 6em;
+    }
+
+    header {
+      margin-bottom: 2em;
+    }
+
+    header h1 {
+      width: fit-content;
+      margin-bottom: 0.5em;
+      color: var(--accent-color);
+      font-size: 1.5em;
+      font-weight: 700;
+      font-variant: small-caps;
+      font-style: oblique;
+      text-decoration: none;
+      border-bottom: 4px solid var(--accent-color);
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding-block: 1em;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    a.entry {
+      color: var(--primary-text-color);
+      text-decoration: none;
+      font-size: 1.5em;
+    }
+
+    .meta {
+      display: block;
+      margin-top: 0.2em;
+      color: var(--secondary-text-color);
+      font-size: 0.8em;
+      font-style: italic;
+    }
+
+    .read-more {
+      display: inline-block;
+      margin-top: 0.55em;
+      color: var(--accent-color);
+      font-size: 0.72em;
+      font-style: italic;
+      text-decoration: underline;
+    }
+
+    .footer-nav {
+      margin-top: 1.5em;
+    }
+
+    .footer-nav a {
+      color: var(--accent-color);
+      font-size: 1.275em;
+      text-decoration: underline;
+      padding-bottom: 2rem;
+    }
+
+    .footer-nav .separator {
+      color: var(--secondary-text-color);
+      font-size: 1.275em;
+      margin-inline: 0.7em;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Articles</h1>
+    </header>
+
+    <section>
+      <ul>
+        <a class="entry" href="../winner-take-most.html">
+          <li>
+            Winner Take Most: How Ranking Algorithms Quietly Hollow Out Your Marketplace
+            <small class="meta">
+              <time datetime="2026-05-25">May 25, 2026</time>
+            </small>
+            <span class="read-more">Read more</span>
+          </li>
+        </a>
+      </ul>
+
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="../index.html">Back home</a>
+        <span class="separator" aria-hidden="true">&bull;</span>
+        <a href="https://www.linkedin.com/in/behnaznojavan/">LinkedIn</a>
+      </nav>
+    </section>
+  </main>
+</body>
+</html>

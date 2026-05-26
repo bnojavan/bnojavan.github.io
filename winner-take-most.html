@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Winner Take Most: How Ranking Algorithms Quietly Hollow Out Your Marketplace</title>
+  <meta name="description" content="Ranking systems are implicit attention allocation mechanisms. Left unconstrained, they concentrate exposure in ways that silently hollow out marketplace supply — and your engagement metrics won't show it until the damage is done. A technical deep-dive into exposure inequality, algorithmic fairness, and optimal transport for marketplace ranking." />
+  <meta name="keywords" content="ranking algorithms, recommender systems, marketplace fairness, exposure inequality, information retrieval, search ranking, long-tail problem, provider fairness, optimal transport, algorithmic fairness, marketplace supply, platform design, search and recommendation, NDCG, Gini coefficient, winner-take-most, marketplace design, RecSys, SIGIR, isoelastic utility, Sinkhorn algorithm" />
+  <meta name="author" content="Behnaz Nojavanasghari" />
+  <meta property="og:title" content="Winner Take Most: How Ranking Algorithms Quietly Hollow Out Your Marketplace" />
+  <meta property="og:description" content="Ranking is attention allocation. Left unconstrained, it concentrates. Here's the math, the framework, and what to do about it." />
+  <meta property="og:type" content="article" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Winner Take Most: How Ranking Algorithms Quietly Hollow Out Your Marketplace" />
+  <meta name="twitter:description" content="Ranking is attention allocation. Left unconstrained, it concentrates. Here's the math, the framework, and what to do about it." />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    @font-face {
+      font-family: 'Petrona Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-normal.DffTHwTe.woff2) format('woff2-variations');
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face {
+      font-family: 'Petrona Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-normal.CvMo8Nw_.woff2) format('woff2-variations');
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    @font-face {
+      font-family: 'Petrona Variable';
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-italic.DPWrcJIc.woff2) format('woff2-variations');
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face {
+      font-family: 'Petrona Variable';
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-italic.Cxq2NBhc.woff2) format('woff2-variations');
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    @font-face {
+      font-family: 'Petrona Fallback';
+      font-style: normal;
+      font-weight: 100 900;
+      src: local('Georgia'), local('Times New Roman'), local('Liberation Serif');
+      size-adjust: 96%;
+      ascent-override: 88.62%;
+      descent-override: 27.89%;
+      line-gap-override: 0%;
+    }
+    @font-face {
+      font-family: 'Petrona Fallback';
+      font-style: italic;
+      font-weight: 100 900;
+      src: local('Georgia Italic'), local('Times New Roman Italic'), local('Liberation Serif Italic');
+      size-adjust: 87.74%;
+      ascent-override: 97.79%;
+      descent-override: 30.77%;
+      line-gap-override: 0%;
+    }
+    :root {
+      --greys-0:#ffffff;--greys-1:#fafafa;--greys-2:#f5f5f5;--greys-4:#d9d9d9;
+      --greys-7:#595959;--greys-12:#000000;--greys-10:#1f1f1f;
+      --violets-1:#f3f0ff;--violets-5:#6741d9;--oranges-3:#ffa94d;
+      --text:var(--greys-12);--muted:var(--greys-7);--accent:var(--violets-5);--accent2:#7c3aed;
+      --accent3:#059669;--warn:#d97706;--bg:var(--greys-0);--bg2:var(--greys-1);--border:#ece8ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text:var(--greys-2);--muted:var(--greys-4);--accent:var(--oranges-3);
+        --bg:var(--greys-10);--bg2:#2a2320;--border:#4d3b2f;
+      }
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{background:var(--bg);}
+    body{font-family:'Petrona Variable','Petrona Fallback',serif;font-size:18px;line-height:1.8;color:var(--text);padding:0 1rem;}
+    .container{max-width:760px;margin:0 auto;padding:3rem 0 6rem;}
+    h1{color:var(--accent);font-size:3rem;line-height:1.05;font-weight:600;letter-spacing:-.03em;margin-bottom:.75rem;}
+    h2{color:var(--accent);font-size:2rem;font-weight:600;line-height:1.2;margin:3rem 0 1rem;}
+    h3{font-size:1.35rem;font-weight:600;margin:2rem 0 .75rem;}
+    p{margin-bottom:1.25rem;}
+    a{color:var(--accent);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    ul,ol{margin:0 0 1.25rem 1.75rem;}
+    li{margin-bottom:.5rem;}
+    .meta{font-size:1.35rem;font-style:italic;color:var(--muted);margin-bottom:2.5rem;}
+    .tag{display:inline-block;background:var(--accent);color:#fff;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:3px;margin-right:.4rem;}
+    .tag-purple{background:var(--accent2);}.tag-green{background:var(--accent3);}
+    .callout{background:#fffbeb;border-left:4px solid var(--warn);padding:1.1rem 1.5rem;margin:2rem 0;font-size:.93rem;font-family:Arial,sans-serif;border-radius:0 6px 6px 0;}
+    .callout-blue{background:#eff6ff;border-left-color:var(--accent);}
+    .callout-green{background:#f0fdf4;border-left-color:var(--accent3);}
+    .callout-purple{background:#faf5ff;border-left-color:var(--accent2);}
+    .math-block{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.5rem;margin:1.5rem 0;overflow-x:auto;text-align:center;font-size:.95rem;}
+    code{font-family:'Courier New',monospace;font-size:.83em;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;}
+    .viz-container{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:2.5rem 0;}
+    .viz-title{font-family:Arial,sans-serif;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.75rem;}
+    .viz-caption{font-family:Arial,sans-serif;font-size:.8rem;color:var(--muted);margin-top:.75rem;font-style:italic;text-align:center;}
+    canvas{width:100%!important;}
+    .legend{display:flex;gap:1.25rem;flex-wrap:wrap;font-family:Arial,sans-serif;font-size:.8rem;margin-bottom:.75rem;}
+    .legend-item{display:flex;align-items:center;gap:.4rem;}
+    .legend-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0;}
+    .preset-btn{font-family:Arial,sans-serif;font-size:.75rem;padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--muted);cursor:pointer;transition:all .15s;}
+    .preset-btn:hover{border-color:var(--accent);color:var(--accent);background:#eff6ff;}
+    .preset-btn.active{border-color:var(--accent);color:#fff;background:var(--accent);}
+    details summary{cursor:pointer;color:var(--accent);font-weight:600;font-family:Arial,sans-serif;font-size:.82rem;padding:.4rem 0;user-select:none;}
+    details pre{margin-top:.5rem;background:#1e293b;color:#e2e8f0;border:none;border-radius:6px;padding:1.1rem 1.25rem;overflow-x:auto;font-size:.78rem;line-height:1.65;}
+    details pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit;}
+    .slider-row{display:flex;align-items:center;gap:1rem;margin:.75rem 0;font-family:Arial,sans-serif;font-size:.9rem;}
+    input[type="range"]{flex:1;accent-color:var(--accent2);}
+    .slider-val{font-weight:700;color:var(--accent2);min-width:3.5rem;text-align:right;}
+    .metrics{display:flex;gap:.75rem;margin:.75rem 0 1rem;font-family:Arial,sans-serif;}
+    .metric-card{flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:.7rem;text-align:center;}
+    .metric-card .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+    .metric-card .value{font-size:1.5rem;font-weight:700;color:var(--accent2);}
+    .metric-card .desc{font-size:.68rem;color:var(--muted);margin-top:2px;}
+    table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:.86rem;margin:1.5rem 0;}
+    th{background:var(--text);color:#fff;padding:.55rem .85rem;text-align:left;font-weight:600;}
+    td{padding:.5rem .85rem;border-bottom:1px solid var(--border);}
+    tr:nth-child(even) td{background:var(--bg2);}
+    hr{border:none;border-top:1px solid var(--border);margin:3rem 0;}
+    .back-link{font-size:1.1rem;font-style:italic;margin-bottom:2rem;display:inline-block;}
+    .summary{border-left:4px solid var(--accent);border-radius:4px;background:var(--violets-1);padding:.5em 1em .1em;margin:0 0 2rem;font-size:1.2em;line-height:1.4em;}
+    .summary-label{color:var(--accent);margin-bottom:.5rem;font-variant:small-caps;font-weight:700;letter-spacing:.03em;font-size:.9rem;}
+    .summary p{margin-bottom:.5rem;}
+    #author{color:var(--muted);display:grid;grid-template-columns:7em minmax(0,34em);column-gap:2em;font-size:1.2em;font-style:italic;justify-content:center;line-height:1.5em;margin-top:2em;margin-bottom:1em;margin-inline:auto;max-width:100%;padding-top:1em;width:fit-content}
+    #author .author-copy{max-width:34em}
+    #author .author-photo{align-self:start;margin-top:.35em}
+    #author p{margin-top:0}
+    .author-mark{display:block;overflow:hidden;width:7em;height:7em;border:.25em solid var(--accent);border-radius:38% 62% 47% 53% / 59% 36% 64% 41%}
+    .author-mark img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 32%}
+    #footer-nav{color:var(--muted);font-size:1.2em;font-style:italic;margin-bottom:2em;text-align:center}
+    #footer-nav .separator{color:var(--muted);margin-inline:.7em}
+    .article-end{font-family:sans-serif;content:"~";color:var(--accent);font-weight:700;display:block;margin-top:1em;margin-bottom:1em;text-align:center}
+    @media(max-width:480px){
+      h1{font-size:2.5rem}
+      h2{font-size:1.6rem}
+      #author{grid-template-columns:1fr}
+      #author .author-photo{justify-self:center;margin-bottom:1em}
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back-link" href="index.html">← Back</a>
+
+  <div class="meta">
+    Behnaz Nojavanasghari &nbsp;&middot;&nbsp; May 2026 &nbsp;&middot;&nbsp; 14 min read
+  </div>
+
+  <h1>Winner Take Most<br/>
+  <span style="color:var(--accent);font-size:.72em;font-weight:600;">How Ranking Algorithms Quietly Hollow Out Your Marketplace</span></h1>
+
+
+  <section class="summary">
+    <div class="summary-label">Summary</div>
+    <p>
+      Ranking systems are implicit allocation mechanisms. Left unconstrained,
+      they concentrate exposure in ways that silently hollow out the supply base
+      they depend on, and your engagement metrics will not show it until the
+      damage is done.
+    </p>
+  </section>
+
+  <p>Last year I showed up to a tech event in Los Angeles. I walked in expecting engineers debating architectures. There was a DJ setup, mezcal sponsors, and a crowd unmistakably more stylish than the average tech happy hour. The event was not particularly impressive, but the DJ was. Something about his style was unique, the kind of thing you don't hear often.</p>
+
+  <p>I walked over and asked him: "how come I don't know you?" He laughed and then got a little serious. That question, apparently, hit something real. He was a new artist, and getting discovered on online platforms was exactly what he was struggling with. The algorithm wasn't surfacing him. It was surfacing what was already working, and what was already working kept getting more of everything.</p>
+
+  <p>That conversation stayed with me, partly because I spend my days thinking about the right way to design these systems, and partly because the power of search and recommendation reaches far beyond any platform. Some of the most consequential things that happened to me, professionally and otherwise, trace back to a search result, a recommendation, a piece of content that surfaced at the right moment. Most people have a version of this. Few have ever stopped to consider how many of those moments were quietly shaped by systems none of us designed. This post is about why winner-take-most outcomes emerge by default, why they're hard to fix, and what it would take to build something better.</p>
+
+  <h2>1 &middot; The Invisible Monopoly in Your Feed</h2>
+
+  <p>When you browse Amazon, Yelp, or Netflix, you are navigating a digital economy whose primary currency is exposure, meaning the probability that a user's attention lands on any given item. These systems routinely suffer from a structural failure mode known as the long-tail effect, where a small number of "rich" items, the historically popular, the repeatedly clicked, the already highly ranked, monopolize the top positions, while new or niche items are buried far below the fold, where almost no organic discovery happens.</p>
+
+  <p>This exposure inequality does not merely disadvantage small providers. It threatens the long-run vitality of the entire platform. The feedback loop is self-reinforcing. High exposure generates more clicks, more clicks produce more behavioral data, more data improves relevance scores, and better scores produce even higher exposure. Top performers accumulate; the rest get progressively less. Below some viability threshold, providers exit. Their exit reduces supply diversity. Reduced diversity degrades future match quality. And by the time this shows up in your engagement metrics, the damage is already done.</p>
+
+  <p>A relevance-optimized ranking system can simultaneously maximize user satisfaction in every single interaction <em>and</em> systematically hollow out the market it depends on. These objectives are not in conflict in the short run. They are in serious conflict over multi-year timescales, and most of our measurement infrastructure is blind to it.</p>
+
+  <p>Traditional Information Retrieval optimizes for a single objective, returning the most relevant results as measured by metrics like NDCG. That model assumes a closed system where relevance is the only concern. Modern marketplaces are not closed systems. They are ecosystems where users, providers, and the platform interact continuously. In that context, ranking is not a neutral technical operation. It is a policy decision about how to allocate attention.</p>
+
+  <p>To measure the resulting inequality, we can use the Gini coefficient borrowed from economics, the standard measure of income inequality applied to the exposure distribution across providers. A Gini near 1 means one provider gets everything; near 0 means all providers get equal exposure. A Gini near 0.9 or above is not a nuanced fairness concern. It is a near-monopoly.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Figure 1 &mdash; What Does the Gini Coefficient Actually Measure?</div>
+
+    <p style="font-family:Arial,sans-serif;font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;">
+      Each bar is one provider&#8217;s share of total exposure. At <strong>Gini&nbsp;=&nbsp;0</strong> every provider gets exactly the same share, a perfectly level playing field. At <strong>Gini&nbsp;=&nbsp;1</strong> one provider absorbs everything and the rest get nothing. Drag the slider to move between those extremes and watch the distribution change.
+    </p>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;flex-wrap:wrap;">
+      <label style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--muted);white-space:nowrap;">Concentration</label>
+      <input type="range" id="alphaSlider" min="1" max="100" step="1" value="10"
+             style="flex:1;min-width:120px;max-width:280px;accent-color:#8b5cf6;">
+      <div style="display:flex;gap:0.4rem;">
+        <button onclick="setLorenzAlpha(1,this)"  style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 10px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">Equal</button>
+        <button onclick="setLorenzAlpha(35,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 10px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">Mild</button>
+        <button onclick="setLorenzAlpha(65,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 10px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">High</button>
+        <button onclick="setLorenzAlpha(90,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 10px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">Extreme</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:1rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:130px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Gini coefficient</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#8b5cf6;" id="lorenzGini">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">0 = equal &nbsp;·&nbsp; 1 = one provider takes all</div>
+      </div>
+      <div style="flex:1;min-width:130px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Top provider&#8217;s share</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#ef4444;" id="top10share">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">% of all exposure</div>
+      </div>
+      <div style="flex:1;min-width:130px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Bottom half&#8217;s share</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#10b981;" id="bot50share">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">% going to bottom 10 providers</div>
+      </div>
+    </div>
+
+    <div style="position:relative;width:100%;height:260px;">
+      <canvas id="lorenzChart"></canvas>
+    </div>
+
+    <div class="viz-caption" id="lorenzCaption">Move the slider to explore what different levels of concentration look like.</div>
+
+
+  </div>
+
+  <h2>2 &middot; The Knapsack Problem: Why Fair Ranking Is Structurally Hard</h2>
+
+  <p>One useful way to frame this problem is as a market, with users on the demand side, providers on the supply side, and the platform as the allocation mechanism. The natural design response is progressive taxation, reducing the ranking signal of already-dominant items and redirecting visibility to providers who haven't had a fair chance. In practice, however, this immediately runs into a structural obstacle. Ranking is binary. A system cannot show 40% of an item. For each query, each item is either shown to the user or it is not. This discreteness transforms the fairness problem into a combinatorial one, specifically a variant of the knapsack problem.</p>
+
+  <p>In the knapsack formulation, each user's recommendation list of size \(k\) is the "knapsack." Each item has a relevance score (its value) and occupies exactly one slot (unit weight). The constraint is that exactly \(k\) items must be selected per user. Fair ranking adds a second set of constraints: each item must receive at least some minimum aggregate exposure \(e^*_i\) across all users. This is the fairness knapsack, and it is in general NP-hard to solve exactly.</p>
+
+  <p>A flat tax applied at the item level, which reduces item \(i\)'s ranking score by a fixed amount, is a blunt instrument. Because the final ranking is binary (show/no-show), a small change to the tax rate can cause sudden, large-scale reshuffling of which items appear in top-\(k\) lists. The result is a discontinuous Pareto frontier. A tiny increase in the redistribution parameter causes an unpredictable jump in accuracy loss. For production systems, this volatility is unacceptable.</p>
+
+  <p>The framework I find most precise for this problem is <a href="#references">Tax-Rank (Chen et al., SIGIR 2024)</a>. It uses isoelastic utility functions, which define what a healthy exposure distribution actually looks like, and Optimal Transport to compute it efficiently. The result sidesteps both the NP-hardness and discontinuity problems that make simpler approaches fragile. Much of what follows draws on that framework, because it gives the sharpest mathematical expression of the design principles I want to work through here.</p>
+
+  <h2>3 &middot; Accuracy-Fairness Tradeoff in Redistribution</h2>
+
+  <p>Two fundamentally different approaches to redistributing algorithmic exposure yield fundamentally different structural properties in how accuracy and redistribution trade off against each other.</p>
+
+  <p>A flat penalty subtracts a fixed amount from every item's ranking score, independent of how much exposure that item has already received. Because ranking produces a binary outcome (an item is either in the top-\(k\) results or it is not), a small change to the penalty can cause a sudden, large reorganization of which items appear. The result is a tradeoff curve with discrete <em>breakpoints</em> where a marginal increase in the redistribution parameter causes a disproportionate drop in accuracy. Between breakpoints the curve is flat; at breakpoints it falls sharply. Navigating this precisely in production is difficult.</p>
+
+  <p>A progressive approach, by contrast, penalizes the disparity in accumulated exposure between items rather than penalizing items directly. Because the penalty increases continuously as the gap widens, small changes to the redistribution parameter produce proportionally small changes to which items are promoted. The resulting tradeoff curve is smooth and differentiable throughout its range.</p>
+
+  <p>The standard way to visualize this is the Pareto frontier, the set of operating points where you cannot improve accuracy without sacrificing redistribution, and vice versa. A flat frontier with breakpoints forces you to jump between operating points; a smooth frontier lets you dial continuously. This smoothness is not aesthetic. It has direct operational consequences. When a platform wants to increase fairness by 5%, a smooth frontier guarantees that accuracy declines proportionally. A stepped frontier offers no such guarantee.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Figure 2 &mdash; Turning Up Fairness: How Quality Changes</div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <label style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--muted);">Fairness setting</label>
+      <input type="range" id="fairDial" min="0" max="100" value="30" step="1"
+             style="flex:1;min-width:120px;max-width:260px;accent-color:#3b82f6;">
+      <span style="font-family:Arial,sans-serif;font-size:0.82rem;font-weight:600;min-width:36px;" id="dialPct">30%</span>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Flat tax &mdash; quality loss</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#D85A30;" id="flatLossCard">&mdash;</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;" id="flatLossNote">&mdash;</div>
+      </div>
+      <div style="flex:1;min-width:140px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Progressive tax &mdash; quality loss</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#185FA5;" id="progLossCard">&mdash;</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">Predictable &mdash; small change, small effect</div>
+      </div>
+    </div>
+
+    <div class="legend" style="margin-bottom:0.75rem;">
+      <div class="legend-item"><div class="legend-dot" style="background:#D85A30;"></div>Flat tax (sudden drops at breakpoints)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#185FA5;"></div>Progressive tax (smooth ramp)</div>
+    </div>
+
+    <div style="position:relative;width:100%;height:260px;">
+      <canvas id="continuityChart"></canvas>
+    </div>
+
+    <div class="viz-caption" id="fairCallout" style="margin-top:0.75rem;">
+      Move the slider to explore what happens at each redistribution setting.
+    </div>
+
+
+  </div>
+
+
+  <h2>4 &middot; Tuning the Fairness-Accuracy Tradeoff</h2>
+
+  <p>The framework controls redistribution with a single parameter, t (the taxation rate). Think of it as a policy dial, ranging from pure relevance at one end to equal exposure at the other. Every setting in between is a different, defensible position on the question of how much a platform owes its long-tail providers.</p>
+
+  <p>The key insight is diminishing returns. When an item already receives a lot of exposure, giving it even more is not as valuable to the overall ecosystem as giving that exposure to an underexposed item. The parameter t controls how sharply this kicks in.</p>
+
+  <p style="font-family:Arial,sans-serif;font-size:0.88rem;color:var(--muted);margin-bottom:0.5rem;">Each item's optimal exposure scales as exposure &prop; relevance<sup>1/t</sup>. That exponent is what each row is really saying.</p>
+
+  <table>
+    <thead><tr><th>Setting</th><th>Exponent (1/t)</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td><strong>t = 0</strong></td><td>1/0 &rarr; &infin;</td><td>Winner takes all. The most relevant item captures everything, identical to a standard greedy ranking.</td></tr>
+      <tr><td><strong>t = 1</strong></td><td>1/1 = 1 (linear)</td><td>Exposure is directly proportional to relevance. Twice the relevance earns twice the exposure. Meritocratic, but no runaway dominance.</td></tr>
+      <tr><td><strong>t = 2</strong></td><td>1/2 = &frac12; (square root)</td><td>An item with 4&times; the relevance gets &radic;4 = 2&times; the exposure. Advantages are real but compressed.</td></tr>
+      <tr><td><strong>t = 3</strong></td><td>1/3 = &frac13; (cube root)</td><td>An item with 8&times; the relevance gets 2&times; the exposure. Strong compression. Long-tail items benefit substantially.</td></tr>
+      <tr><td><strong>t &rarr; &infin;</strong></td><td>1/&infin; = 0</td><td>relevance<sup>0</sup> = 1 for every item. Exposure is equal regardless of quality — purely egalitarian.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Figure 3 shows what each setting looks like as a utility curve. The x-axis is an item's current exposure; the y-axis is how much value the system assigns to giving it one more unit. At t=0 the line is flat, meaning the system treats all exposure equally. As t increases, the curve bends. Extra exposure to an already-dominant item becomes worth progressively less, which is what drives the system to spread attention more broadly.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Figure 3 &mdash; How t controls diminishing returns on exposure</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>t=0 (no redistribution)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f97316;"></div>t=0.5</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div>t=1 (proportional)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6;"></div>t=2</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div>t=3 (strong redistribution)</div>
+    </div>
+    <canvas id="utilityChart" height="270"></canvas>
+    <div class="viz-caption">Each curve shows the marginal value of one more unit of exposure, as a function of how much exposure an item already has. Flat line (t=0): the system does not care about distribution. Steep curves (high t): giving more to an already-visible item is worth much less than giving it to a hidden one — so the optimizer naturally spreads exposure.</div>
+  </div>
+
+  <h2>5 &middot; The Price of Taxation</h2>
+
+  <p>A central objection to redistribution interventions in production systems is the uncertainty of their cost. Decision-makers ask: "If we increase redistribution, what is the worst-case hit to engagement?" Until recently, no formal answer existed. The framework provides one through the concept of the Price of Taxation (POT).</p>
+
+  <p>The POT is defined as the maximum ratio of ranking quality under the unconstrained system to ranking quality under the redistribution-constrained system:</p>
+
+  <div class="math-block">
+    $$\text{POT}(t) = \frac{W^*_{\text{greedy}}}{W^*_{\text{fair}}(t)}$$
+  </div>
+
+  <p>The framework proves that this ratio is bounded above by a closed-form expression involving only \(t\) and \(\lambda\), where \(\lambda\) is the ratio of the highest to lowest relevance score in the catalog. The relevance score (\(\gamma\)) is the platform's internal quality signal for each item, capturing signals like engagement rate, ratings, or conversion (\(\lambda = \gamma_{\max} / \gamma_{\min}\)):</p>
+
+  <div class="math-block">
+    $$\text{POT}(t) \leq \lambda^{\,t}$$
+  </div>
+
+  <p>The bound has an intuitive reading. The more unequal the catalog (large \(\lambda\)), the higher the potential accuracy cost of enforcing fairness; the stronger the redistribution (large \(t\)), the more that inequality is amplified. A platform with a homogeneous catalog (\(\lambda \approx 1\)) pays almost nothing for fairness at any \(t\). A platform with extreme quality spread pays more, but the ceiling is now known in advance. This transforms a risky ethical choice into a manageable risk budget with a guaranteed worst-case ceiling.</p>
+
+  <p>These two quantities serve different purposes. The exact POT, the ratio W*<sub>greedy</sub> / W*<sub>fair</sub>(t), is only knowable after you have already run the full optimization, which is computationally expensive. The upper bound λ<sup>t</sup> costs almost nothing to compute, requiring only the maximum and minimum relevance scores from your catalog with no optimization at all. In practice, use it as a pre-flight check. If λ<sup>t</sup> is already within your acceptable risk budget, proceed to the full solve. If not, adjust t before spending any compute.</p>
+
+  <p>Before running anything, a platform can compute λ from its catalog, evaluate λ<sup>t</sup> for candidate values of t, and present a guaranteed worst-case accuracy ceiling to stakeholders. "At t = 0.1, the maximum possible accuracy loss in ranking quality, measured by standard metrics like NDCG against the unconstrained baseline, is at most 26%. Here is the proof." That is a tractable conversation to have before a single ranking has been reordered. The redistribution parameter becomes a resource with a known price tag.</p>
+
+  <p>A concrete example makes this tangible. Take Netflix. Each title carries a relevance score γ, the platform's internal quality signal capturing engagement signals like completion rate, ratings, and repeat views. A flagship original like Stranger Things might have γ<sub>max</sub> = 10. An indie documentary just added to the catalog, with no viewing history yet, might have γ<sub>min</sub> = 0.5. That gives λ = 10 / 0.5 = 20.</p>
+
+  <p>Now scan a few candidate values of t before committing to anything:</p>
+
+  <table>
+    <thead><tr><th>t</th><th>Bound: λ<sup>t</sup> = 20<sup>t</sup></th><th>Worst-case accuracy loss</th><th>Interpretation</th></tr></thead>
+    <tbody>
+      <tr><td>0.05</td><td>20<sup>0.05</sup> ≈ 1.16</td><td>≤ 14%</td><td>Very mild. Safe to deploy without further analysis.</td></tr>
+      <tr><td>0.10</td><td>20<sup>0.10</sup> ≈ 1.35</td><td>≤ 26%</td><td>Acceptable if your risk budget is under 30%.</td></tr>
+      <tr><td>0.50</td><td>20<sup>0.50</sup> ≈ 4.5</td><td>≤ 78%</td><td>Bound is too wide to be useful. Run the full solve to get the actual cost.</td></tr>
+    </tbody>
+  </table>
+
+  <p>The bound is deliberately conservative. In practice, for t = 0.1 on a real catalog, the actual accuracy loss is typically 2–5%, well below the 26% ceiling. The bound is not a prediction. It is a guarantee. Contrast this with a platform like a niche streaming service whose catalog is relatively uniform in quality, say γ<sub>max</sub> = 2, γ<sub>min</sub> = 1.5, giving λ ≈ 1.33. That platform gets POT ≤ 1.33<sup>0.5</sup> ≈ 1.15 even at strong redistribution settings, meaning it can afford to be far more aggressive on redistribution before the bound becomes a concern. A platform like Netflix or YouTube, with a much wider quality spread, pays a higher ceiling but gains more room to help long-tail content find its audience.</p>
+
+  <h2>6 &middot; Solving It in Two Stages</h2>
+
+  <p>Even with a well-defined objective and a bounded cost, implementing progressive redistribution at scale faces one more obstacle: the exact optimization is NP-hard. Enumerating all possible top-\(k\) allocations grows factorially in the number of items. The key insight is that the hard combinatorial problem becomes tractable through a two-stage decomposition. First compute ideal exposure targets as a continuous problem, then find actual rankings that hit those targets. Each stage is well-understood and can be solved efficiently.</p>
+
+  <h3>6.1 &nbsp; Stage 1: How much exposure should each item get?</h3>
+
+  <p>Stage 1 produces a single target number \(e^*_i\) for each item, representing the fraction of all user lists it should appear in. The optimizer maximizes total ecosystem utility subject to two constraints: exposures must sum to \(k\) (the number of ranking slots), and no item can appear in more than 100% of lists.</p>
+
+  <div class="math-block">
+    $$\mathbf{e}^* = \arg\max_{\mathbf{e}} \sum_i U_i(e_i) \quad \text{s.t.} \quad \sum_i e_i = k,\quad 0 \le e_i \le 1$$
+  </div>
+
+  <p>Because the utility function has diminishing returns (concave), this has exactly one solution with no local optima to get stuck in. When no item hits those boundaries, the solution comes out as a clean formula:</p>
+
+  <div class="math-block">
+    $$e^*_i \;\propto\; (\gamma_i \cdot \eta_i)^{1/t}$$
+  </div>
+
+  <p>Higher quality still earns more exposure, but the exponent \(1/t\) compresses the gap. At \(t = 2\), an item with \(4\times\) the relevance gets only \(\sqrt{4} = 2\times\) the exposure. When items do bump against a boundary, a standard convex solver clips and redistributes the overflow until all constraints are satisfied.</p>
+
+  <h3>6.2 &nbsp; Stage 2: Turn targets into actual rankings</h3>
+
+  <p>Stage 1 says what each item <em>deserves</em>. Stage 2 figures out <em>which users</em> see it. The output is an assignment matrix where each entry \(X_{ui}\) is the probability that item \(i\) appears in user \(u\)'s list. Two constraints must hold simultaneously. Every user's list has exactly \(k\) items, and every item's total appearances across all users meets its target from Stage 1.</p>
+
+  <p>Satisfying both constraints at once while maximizing relevance is expensive if approached directly. The approach adds a small smoothing penalty that discourages extreme all-or-nothing assignments. This turns the problem into one with a known closed-form structure. The solution is a fixed matrix \(\mathbf{K} = e^{\mathbf{R}/\lambda}\), where \(\mathbf{R}\) is the relevance matrix (each entry \(R_{ui}\) holds the relevance of item \(i\) for user \(u\)), and \(\lambda\) controls the smoothing strength, determining how sharply the assignment favors high-relevance pairs.</p>
+
+  <p>Finding the assignment then reduces to two alternating operations repeated until convergence:</p>
+  <ol>
+    <li>Divide every row by its sum &rarr; each user's list sums to \(k\)</li>
+    <li>Divide every column by its target &rarr; each item hits its exposure</li>
+  </ol>
+  <p>Each pass satisfies one constraint while slightly disturbing the other. The disturbance shrinks each round. Because this is repeated division on a fixed matrix rather than a search over possible rankings, it stays fast even at millions of users. Cost grows with the size of the matrix, not the number of possible orderings.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Figure 4 &mdash; Optimal Transport: How Attention Flows Change Under Exposure-Aware Ranking</div>
+    <div style="display:flex;align-items:center;gap:12px;margin:.6rem 0 .4rem;font-family:Arial,sans-serif;font-size:.85rem;">
+      <span style="font-weight:600;min-width:52px;color:#1d4ed8;" id="ot-tval">t = 0</span>
+      <input type="range" id="ot-slider" min="0" max="30" step="1" value="0" oninput="drawOTSlider(this.value)" style="flex:1;accent-color:#3b82f6;cursor:pointer;"/>
+    </div>
+    <svg id="ot-flow" viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;"></svg>
+    <div class="viz-caption" id="ot-caption">t = 0: winner-takes-all. Arc width encodes attention volume — nearly all flow routes to top-tier items. Drag the slider to redistribute.</div>
+  </div>
+
+  <h2>7 &middot; Adjusting the Fairness Parameter Over Time</h2>
+
+  <p>One of the most powerful aspects of this framework is that \(t\) does not need to be fixed. Just as a central bank adjusts interest rates in response to macroeconomic conditions, tightening when the economy overheats and loosening when growth stalls, a platform can dynamically adjust its redistribution parameter in response to market health signals.</p>
+
+  <p>During high-traffic periods, when demand is strong and the provider base is healthy, a higher \(t\) prevents monopolization and invests in long-tail diversity. During competitive or low-engagement periods, temporarily lowering \(t\) maximizes immediate relevance and incentivizes provider competition. Managing \(t\) dynamically, in response to leading indicators of supply health, is the long-run answer. This treats the marketplace as a living ecosystem, and the redistribution parameter as the primary lever for managing its health.</p>
+
+  <p>The simulation below makes this concrete. Each provider has a popularity weight. The top provider starts with a large share of attention, the bottom with almost none. Each month, any provider whose exposure falls below a minimum viability floor exits the market. The remaining providers are renumbered, their weights reset, and the cycle repeats. At t = 0, the feedback loop compounds rapidly: every exit concentrates exposure further on the survivors, pushing the next-weakest providers below the floor the following month. A higher redistribution parameter breaks this cycle by keeping the floor reachable for providers further down the ranking.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Figure 5 &mdash; Provider Survival Over Time</div>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:180px;">
+        <label style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--muted);white-space:nowrap;">Redistribution parameter <em>t</em></label>
+        <input type="range" id="mktT" min="0" max="30" step="1" value="10"
+               style="flex:1;accent-color:#3b82f6;">
+        <span style="font-family:Arial,sans-serif;font-size:0.82rem;font-weight:600;min-width:36px;" id="mktTVal">t=1.0</span>
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--muted);white-space:nowrap;">Survival floor</label>
+          <input type="range" id="mktExit" min="5" max="35" step="5" value="15"
+                 style="flex:1;accent-color:#f97316;">
+          <span style="font-family:Arial,sans-serif;font-size:0.82rem;font-weight:600;min-width:36px;color:#f97316;" id="mktExitVal">15%</span>
+        </div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:3px;" id="mktExitNote">A provider exits when receiving less than 15% of what equal distribution would give them</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button onclick="setMktT(0,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 12px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">No redistribution (t=0)</button>
+      <button onclick="setMktT(10,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 12px;border:1.5px solid #3b82f6;border-radius:14px;background:#eff6ff;cursor:pointer;color:#3b82f6;">Proportional (t=1)</button>
+      <button onclick="setMktT(20,this)" style="font-family:Arial,sans-serif;font-size:0.72rem;padding:3px 12px;border:1.5px solid #e2e8f0;border-radius:14px;background:#fff;cursor:pointer;color:#64748b;">Strong (t=2)</button>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:1rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">No redistribution — providers left</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#ef4444;" id="mktBmCount">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">after 24 months</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Fair ranking — providers left</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#3b82f6;" id="mktFairCount">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">after 24 months</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;">
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Providers saved</div>
+        <div style="font-family:Arial,sans-serif;font-size:1.5rem;font-weight:700;color:#10b981;" id="mktSaved">—</div>
+        <div style="font-family:Arial,sans-serif;font-size:0.72rem;color:var(--muted);margin-top:2px;">by switching to fair ranking</div>
+      </div>
+    </div>
+
+    <div class="legend" style="margin-bottom:0.75rem;">
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div>No redistribution (t=0) — reference</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div>Redistributed ranking (current t)</div>
+    </div>
+
+    <div style="position:relative;width:100%;height:260px;">
+      <canvas id="marketChart"></canvas>
+    </div>
+
+    <div class="viz-caption" id="mktCaption">Each month, providers whose exposure falls below the exit threshold leave the market. The red line always shows what happens with no redistribution.</div>
+
+    <div style="font-family:Arial,sans-serif;font-size:0.82rem;color:var(--muted);margin-top:1rem;border-top:1px solid var(--border);padding-top:0.9rem;line-height:1.7;">
+      <strong style="color:var(--text);">How each month is calculated.</strong>
+      Each provider is assigned a popularity weight \(w_i = (N - i)^2\), where <strong>N</strong> is the number of active providers that month and <strong>i</strong> is their rank (0 = most popular, N−1 = least popular). So the top provider gets weight \(N^2\) and the bottom gets \(1^2 = 1\). At 60 providers that's a 3,600-to-1 ratio, reflecting how real marketplaces concentrate attention at the top. The squaring is what creates the steep drop-off; a higher power would make it steeper still.
+      <br><br>Each month, exposure is then computed as:
+      <div style="text-align:center;margin:.6rem 0;">\( e_i = \dfrac{w_i^{\,1/t}}{\displaystyle\sum_j w_j^{\,1/t}} \)</div>
+      At \(t = 0\) the top provider captures nearly all exposure. As \(t\) increases, the exponent \(1/t\) compresses the differences, spreading exposure more evenly. Any provider whose \(e_i\) falls below the survival floor exits. The remaining providers are renumbered from 0, their weights reset, and the process repeats. The compounding effect is what drives the rapid collapse in the red line: every exit concentrates exposure further on the survivors, pushing the new bottom providers below the floor the following month.
+    </div>
+  </div>
+
+  <h2>If You're Building a Marketplace Today</h2>
+
+  <p>Instrument supply health now. Provider count by tier, retention rate, exposure Gini, and exit rate by tier all belong on the same dashboard as user satisfaction. If you don't measure it, you won't see the problem coming. This is a one-sprint change with no architectural risk.</p>
+
+  <p>Compute your λ. Pull the max and min relevance scores from your catalog and compute the ratio. This single number tells you, before any optimization, what a redistribution intervention would cost at worst. It gives you a defensible ceiling to bring into any stakeholder conversation.</p>
+
+  <p>Run a long-horizon simulation. Build a simple provider exit model and project your current ranking policy forward 12 to 24 months. Look at what happens to your supply base. This is the instrument your A/B testing infrastructure cannot give you, and it doesn't need to be perfect to be useful.</p>
+
+  <p>Teams looking to experiment directly can turn to <a href="#references">FairDiverse (Xu et al., SIGIR 2025)</a>, an open-source toolkit that implements Tax-Rank and several other fair re-ranking algorithms out of the box.</p>
+
+  <h2>Closing Thoughts</h2>
+
+  <p>Winner-take-most outcomes emerge by default from relevance-only ranking. The feedback loop is silent and slow. High exposure generates more data, more data improves scores, better scores generate more exposure. Below some viability threshold, providers exit, and by the time the damage shows up in your engagement metrics, the decisions that caused it are long past. The framework in this post gives a principled way to measure this inequality, bound the cost of correcting it before touching a single ranking, and solve it efficiently at scale.</p>
+
+  <p>Every ranking algorithm already encodes a value judgment about whose outcomes matter and how much. It just doesn't say so out loud. Making that explicit is a more accountable position than "we optimize for relevance," and it's a conversation the industry now has the tools to have precisely.</p>
+
+  <p>The frameworks solve the optimization problem. Several hard questions sit underneath it. If relevance scores are built from exposure history, can you ever truly measure provider merit, or only accumulated advantage? If the damage shows up 18 months after the decisions that caused it, what does it mean to measure marketplace health in real time? These are not edge cases. They are the questions that will define whether the next generation of marketplaces builds something more durable or repeats the same structural mistakes with better math.</p>
+
+  <p style="margin-top:2rem;">By the way, last I heard from my DJ friend, he was doing better and had found his audience. No thanks to the algorithm. That's kind of the point.</p>
+
+  <h2 id="references">References</h2>
+  <p>Xu, C., Ye, X., Wang, W., Pang, L., Xu, J., &amp; Chua, T-S. (2024). <em>A Taxation Perspective for Fair Re-ranking.</em> In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '24), July 14–18, 2024, Washington, DC, USA. ACM.</p>
+  <p>Xu, C., Deng, Z., Rus, C., Ye, X., Liu, Y., Xu, J., Dou, Z., Wen, J-R., &amp; de Rijke, M. (2025). <em>FairDiverse: A Comprehensive Toolkit for Fair and Diverse Information Retrieval Algorithms.</em> In Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '25), July 2025, Padua, Italy. ACM.</p>
+
+  <div class="article-end">~</div>
+
+  <footer id="author">
+    <div class="author-photo">
+      <div class="author-mark">
+        <img src="1000038445.jpg" alt="Behnaz Nojavanasghari" />
+      </div>
+    </div>
+    <div class="author-copy">
+      <p>
+        I’m Behnaz Nojavanasghari, an AI/ML leader in the San Francisco Bay
+        Area. I build and scale machine learning systems from research to
+        production, with a focus on search, recommendation systems,
+        personalization, and AI-first products. My work spans technical
+        strategy, experimentation, and growing strong ML teams that deliver
+        measurable impact.
+      </p>
+      <p>
+        Connect with me on
+        <a href="https://www.linkedin.com/in/behnaznojavan/">LinkedIn</a>.
+      </p>
+    </div>
+  </footer>
+
+  <nav id="footer-nav" aria-label="Footer navigation">
+    <a href="index.html">More about me</a>
+    <span class="separator" aria-hidden="true">&bull;</span>
+    <a href="s/index.html">More articles</a>
+    <span class="separator" aria-hidden="true">&bull;</span>
+    <a href="#top" onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;">Back to top</a>
+  </nav>
+
+</div>
+
+<script>
+const C={red:'#ef4444',orange:'#f97316',blue:'#3b82f6',green:'#10b981',purple:'#8b5cf6',gray:'#94a3b8',grid:'rgba(148,163,184,0.25)'};
+const font='Arial,sans-serif';
+
+(function(){
+  const N=20;
+
+  // Lookup table [targetGini, alpha] for N=20 power-law, normalized Gini = raw*N/(N-1)
+  // Precomputed so slider maps LINEARLY to Gini 0→1, not nonlinearly to alpha
+  const GTABLE=[[0,0],[0.10,0.24],[0.20,0.52],[0.30,0.88],[0.40,1.32],
+                [0.50,1.92],[0.60,2.80],[0.70,4.16],[0.80,6.64],
+                [0.90,12.64],[0.95,21.0],[0.99,90.0],[1.0,999]];
+
+  function giniToAlpha(g){
+    if(g<=0) return 0;
+    if(g>=1) return 999;
+    for(let i=0;i<GTABLE.length-1;i++){
+      if(g<=GTABLE[i+1][0]){
+        const t=(g-GTABLE[i][0])/(GTABLE[i+1][0]-GTABLE[i][0]);
+        return GTABLE[i][1]+t*(GTABLE[i+1][1]-GTABLE[i][1]);
+      }
+    }
+    return 999;
+  }
+
+  function makeExposure(sliderVal){
+    if(sliderVal>=100){const r=Array(N).fill(0);r[0]=1;return r;}
+    const targetGini=(sliderVal-1)/99;
+    if(targetGini<0.001) return Array(N).fill(1/N);
+    const alpha=giniToAlpha(targetGini);
+    if(alpha<0.001) return Array(N).fill(1/N);
+    // Log-space arithmetic avoids float overflow at large alpha
+    const logW=Array.from({length:N},(_,i)=>alpha*Math.log(N-i));
+    const maxLog=logW[0];
+    const w=logW.map(v=>Math.exp(v-maxLog));
+    const sum=w.reduce((a,b)=>a+b,0);
+    return w.map(v=>v/sum);
+  }
+
+  function gini(shares){
+    const s=[...shares].sort((a,b)=>a-b),n=s.length;
+    const mean=s.reduce((a,b)=>a+b,0)/n;
+    let num=0;
+    for(let i=0;i<n;i++) num+=(2*i-n+1)*s[i];
+    const raw=Math.abs(num)/(n*n*mean);
+    return Math.min(1,raw*n/(n-1));
+  }
+
+  const labels=Array.from({length:N},(_,i)=>'P'+(i+1));
+  const initExp=makeExposure(10);
+
+  const chart=new Chart(document.getElementById('lorenzChart').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{
+        label:'Exposure share',
+        data:initExp.map(v=>parseFloat((v*100).toFixed(2))),
+        backgroundColor:initExp.map((_,i)=>i===0?'rgba(239,68,68,0.8)':i<5?'rgba(139,92,246,0.6)':'rgba(139,92,246,0.25)'),
+        borderWidth:0
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:ctx=>ctx.parsed.y.toFixed(1)+'% of exposure'
+      }}},
+      scales:{
+        x:{title:{display:true,text:'Providers (sorted by exposure)',font:{family:font,size:11},color:C.gray},
+           ticks:{font:{family:font,size:10},color:C.gray},grid:{display:false}},
+        y:{title:{display:true,text:'Share of total exposure (%)',font:{family:font,size:11},color:C.gray},
+           ticks:{callback:v=>v+'%',font:{family:font,size:10},color:C.gray},
+           min:0,max:100,grid:{color:C.grid}}
+      }
+    }
+  });
+
+  function update(sliderVal){
+    const exp=makeExposure(sliderVal);
+    const g=gini(exp);
+    const topShare=(exp[0]*100).toFixed(1);
+    const botShare=(exp.slice(N/2).reduce((a,b)=>a+b,0)*100).toFixed(1);
+
+    document.getElementById('lorenzGini').textContent=g.toFixed(3);
+    document.getElementById('top10share').textContent=topShare+'%';
+    document.getElementById('bot50share').textContent=botShare+'%';
+
+    chart.data.datasets[0].data=exp.map(v=>parseFloat((v*100).toFixed(2)));
+    chart.data.datasets[0].backgroundColor=exp.map((_,i)=>
+      i===0?'rgba(239,68,68,0.8)':i<5?'rgba(139,92,246,0.6)':'rgba(139,92,246,0.25)');
+    chart.update();
+
+    const caption=g<0.05
+      ? 'Gini ≈ 0: every provider gets an equal share. No item has an advantage.'
+      : g<0.35
+        ? 'Gini = '+g.toFixed(2)+': mild concentration. The top provider gets '+topShare+' of exposure. The bottom half still receives '+botShare+'.'
+        : g<0.70
+          ? 'Gini = '+g.toFixed(2)+': significant concentration. The top provider commands '+topShare+' of all exposure.'
+          : g>=0.999
+        ? 'Gini = 1.00: total concentration. One provider captures all exposure. The rest receive nothing.'
+        : 'Gini = '+g.toFixed(2)+': extreme concentration. The top provider commands '+topShare+' of all exposure. The bottom half gets just '+botShare+'.';
+    document.getElementById('lorenzCaption').textContent=caption;
+  }
+
+  document.getElementById('alphaSlider').addEventListener('input',function(){
+    document.querySelectorAll('[onclick^="setLorenzAlpha"]').forEach(b=>{
+      b.style.borderColor='#e2e8f0';b.style.color='#64748b';b.style.background='#fff';
+    });
+    update(+this.value);
+  });
+
+  window.setLorenzAlpha=function(v,btn){
+    document.getElementById('alphaSlider').value=v;
+    document.querySelectorAll('[onclick^="setLorenzAlpha"]').forEach(b=>{
+      b.style.borderColor='#e2e8f0';b.style.color='#64748b';b.style.background='#fff';
+    });
+    if(btn){btn.style.borderColor='#8b5cf6';btn.style.color='#8b5cf6';btn.style.background='#faf5ff';}
+    update(v);
+  };
+
+  update(10);
+})();
+
+(function(){
+  const PROG_T  =[0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1,1.2,1.5,2,2.5,3];
+  const PROG_ACC=[6.27,6.22,6.15,6.06,5.96,5.84,5.71,5.57,5.43,5.28,5.13,4.85,4.48,3.97,3.57,3.24];
+  const BASE=PROG_ACC[0], TMAX=3;
+
+  function progLossAt(f){
+    const t=f*TMAX;
+    for(let i=0;i<PROG_T.length-1;i++){
+      if(t<=PROG_T[i+1]){
+        const s=(t-PROG_T[i])/(PROG_T[i+1]-PROG_T[i]);
+        return (BASE-(PROG_ACC[i]+s*(PROG_ACC[i+1]-PROG_ACC[i])))/BASE*100;
+      }
+    }
+    return (BASE-PROG_ACC[PROG_ACC.length-1])/BASE*100;
+  }
+
+  const K=5;
+  function buildFlat(){
+    const total=progLossAt(1);
+    const pts=[{x:0,y:0}];
+    let loss=0;
+    for(let k=0;k<K;k++){
+      const xmid=(k+0.5)/K, xend=(k+1)/K;
+      const rise=total/K*0.12*(1+0.15*Math.sin(k*2.9));
+      const jump=total/K*0.88*(1+0.18*Math.sin(k*2.1));
+      loss+=rise; pts.push({x:parseFloat(xmid.toFixed(3)),y:parseFloat(loss.toFixed(2))});
+      loss+=jump; loss=Math.min(loss,total*1.01);
+      pts.push({x:parseFloat(xend.toFixed(3)),y:parseFloat(loss.toFixed(2))});
+    }
+    return pts;
+  }
+
+  // Build flat loss lookup from stepped data
+  const flatPts=buildFlat();
+  function flatLossAt(f){
+    for(let i=flatPts.length-1;i>=0;i--){if(flatPts[i].x<=f)return flatPts[i].y;}
+    return 0;
+  }
+
+  // Sample both curves at 101 points for a line chart
+  const labels=Array.from({length:101},(_,i)=>i+'%');
+  const flatSamples=Array.from({length:101},(_,i)=>parseFloat(flatLossAt(i/100).toFixed(2)));
+  const progSamples=Array.from({length:101},(_,i)=>parseFloat(progLossAt(i/100).toFixed(2)));
+
+  function makeMarker(idx,samples){
+    const d=new Array(101).fill(null);
+    d[idx]=samples[idx];
+    return d;
+  }
+
+  const chart=new Chart(document.getElementById('continuityChart').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Flat tax',data:flatSamples,borderColor:'#D85A30',backgroundColor:'transparent',
+         borderWidth:2.5,pointRadius:0,tension:0,fill:false},
+        {label:'Progressive',data:progSamples,borderColor:'#185FA5',backgroundColor:'transparent',
+         borderWidth:2.5,pointRadius:0,tension:0.35,fill:false},
+        {label:'flat-pos',data:makeMarker(30,flatSamples),borderColor:'#D85A30',
+         backgroundColor:'#D85A30',pointRadius:7,pointHoverRadius:7,showLine:false,fill:false,
+         spanGaps:false},
+        {label:'prog-pos',data:makeMarker(30,progSamples),borderColor:'#185FA5',
+         backgroundColor:'#185FA5',pointRadius:7,pointHoverRadius:7,showLine:false,fill:false,
+         spanGaps:false},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      plugins:{legend:{display:false},tooltip:{
+        callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'%';}}
+      }},
+      scales:{
+        x:{title:{display:true,text:'Fairness setting  (0% = none  →  100% = maximum)',font:{family:font,size:11},color:C.gray},
+           ticks:{autoSkip:true,maxTicksLimit:6,font:{family:font,size:10},color:C.gray,maxRotation:0},
+           grid:{color:C.grid}},
+        y:{title:{display:true,text:'Quality loss vs. no-tax baseline',font:{family:font,size:11},color:C.gray},
+           ticks:{callback:function(v){return v.toFixed(0)+'%';},font:{family:font,size:10},color:C.gray},
+           min:0,max:55,grid:{color:C.grid}}
+      }
+    }
+  });
+
+  function update(pct){
+    const f=pct/100;
+    const fl=flatLossAt(f), pl=progLossAt(f);
+    document.getElementById('dialPct').textContent=pct+'%';
+    document.getElementById('flatLossCard').textContent=fl.toFixed(1)+'%';
+    document.getElementById('progLossCard').textContent=pl.toFixed(1)+'%';
+    const diff=fl-pl;
+    document.getElementById('flatLossNote').textContent=diff>0.5
+      ? '+'+diff.toFixed(1)+'% more than progressive at same setting'
+      : 'Similar to progressive here';
+    chart.data.datasets[2].data=makeMarker(pct,flatSamples);
+    chart.data.datasets[3].data=makeMarker(pct,progSamples);
+    chart.update('none');
+    const nearBP=flatPts.some((p,i)=>i>0&&i%2===0&&Math.abs(p.x-f)<0.06);
+    document.getElementById('fairCallout').textContent=nearBP
+      ? 'Near a breakpoint — a small increase here can cause a sudden quality drop with the flat tax.'
+      : pct<15
+        ? 'At low fairness settings both approaches behave similarly. Differences grow as you push further.'
+        : pct>75
+          ? 'At high settings the gap widens — the flat tax overshoots because it cannot fine-tune between breakpoints.'
+          : 'The flat tax (orange) holds steady then drops abruptly. The progressive (blue) rises at a steady, predictable rate.';
+  }
+
+  document.getElementById('fairDial').addEventListener('input',function(){update(+this.value);});
+  update(30);
+})();
+
+(function(){
+  const xs=Array.from({length:100},(_,i)=>(i+1)/100);
+  function iso(e,t){return Math.abs(t-1)<1e-9?Math.log(e):Math.pow(e,1-t)/(1-t);}
+  function norm(arr){const mn=Math.min(...arr),mx=Math.max(...arr);return arr.map(v=>(v-mn)/(mx-mn));}
+  new Chart(document.getElementById('utilityChart').getContext('2d'),{type:'line',data:{labels:xs.map(e=>e.toFixed(2)),datasets:[
+    {data:norm(xs.map(e=>iso(e,0))),borderColor:C.red,borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false},
+    {data:norm(xs.map(e=>iso(e,.5))),borderColor:C.orange,borderWidth:2.5,pointRadius:0,fill:false},
+    {data:norm(xs.map(e=>iso(e,1))),borderColor:C.blue,borderWidth:2.5,pointRadius:0,fill:false},
+    {data:norm(xs.map(e=>iso(e,2))),borderColor:C.purple,borderWidth:2.5,pointRadius:0,fill:false},
+    {data:norm(xs.map(e=>iso(e,3))),borderColor:C.green,borderWidth:2.5,pointRadius:0,fill:false},
+  ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Provider exposure',font:{family:font,size:11},color:C.gray},ticks:{maxTicksLimit:11,font:{family:font,size:10}},grid:{color:C.grid}},y:{title:{display:true,text:'Utility (normalized)',font:{family:font,size:11},color:C.gray},ticks:{font:{family:font,size:10}},grid:{color:C.grid}}}}});
+})();
+
+(function(){
+  const lx=108,rx=468,nw=112,nh=26,rw=124;
+  const users=[{y:55,label:'User group A'},{y:100,label:'User group B'},{y:148,label:'User group C'},{y:196,label:'User group D'}];
+  const items=[{y:55,label:'Top tier (5%)'},{y:100,label:'Mid tier (20%)'},{y:148,label:'Long tail (45%)'},{y:196,label:'Fringe (30%)'}];
+  // [user_idx, item_idx, relevance_weight, redistributed_weight]
+  // redistributed weights are equal per user — true uniform exposure
+  const flows=[
+    [0,0,28,9],[0,1,6,9],[0,2,2,9],[0,3,0,9],
+    [1,0,22,8],[1,1,6,8],[1,2,2,8],[1,3,0,8],
+    [2,0,16,6],[2,1,5,6],[2,2,3,6],[2,3,0,6],
+    [3,0,10,5],[3,1,4,5],[3,2,3,5],[3,3,0,5]
+  ];
+  function lerp(a,b,t){return a+(b-a)*t;}
+  window.drawOTSlider=function(v){
+    const t=parseInt(v);
+    const blend=t/30;
+    document.getElementById('ot-tval').textContent=t===0?'t = 0':t===30?'t → ∞':'t = '+(t/10).toFixed(1);
+    const nodeStroke=blend>=0.5?'#3b82f6':'#ef4444';
+    const nodeFill=blend>=0.5?'#eff6ff':'#fef2f2';
+    const r=Math.round(lerp(239,59,blend)),g=Math.round(lerp(68,130,blend)),b=Math.round(lerp(68,246,blend));
+    let h='';
+    h+=`<text x="${lx+nw/2}" y="34" text-anchor="middle" font-size="9" font-family="Arial" fill="#94a3b8">USERS</text>`;
+    h+=`<text x="${rx+rw/2}" y="34" text-anchor="middle" font-size="9" font-family="Arial" fill="#94a3b8">ITEMS</text>`;
+    for(const[ui,pi,bw,pw] of flows){
+      const w=lerp(bw,pw,blend);
+      if(w<0.5)continue;
+      const uy=users[ui].y, py=items[pi].y;
+      const op=Math.min(0.85,(0.10+w*0.022)).toFixed(2);
+      h+=`<path d="M${lx+nw} ${uy} C${lx+nw+70} ${uy} ${rx-70} ${py} ${rx} ${py}" stroke="rgb(${r},${g},${b})" stroke-width="${w.toFixed(1)}" fill="none" opacity="${op}"/>`;
+    }
+    for(const u of users){
+      h+=`<rect x="${lx}" y="${u.y-13}" width="${nw}" height="${nh}" rx="4" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5"/>`;
+      h+=`<text x="${lx+nw/2}" y="${u.y+4}" text-anchor="middle" font-size="10" font-family="Arial" fill="#1a1a2e">${u.label}</text>`;
+    }
+    for(const p of items){
+      h+=`<rect x="${rx}" y="${p.y-13}" width="${rw}" height="${nh}" rx="4" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5"/>`;
+      h+=`<text x="${rx+rw/2}" y="${p.y+4}" text-anchor="middle" font-size="10" font-family="Arial" fill="#1a1a2e">${p.label}</text>`;
+    }
+    document.getElementById('ot-flow').innerHTML=h;
+    const captions=[
+      't = 0: winner-takes-all. Arc width encodes attention volume — nearly all flow routes to top-tier items. Drag the slider to redistribute.',
+      't = 0.5–1.0: mild redistribution begins. Mid-tier and long-tail items start receiving meaningful attention.',
+      't = 1.0–2.0: proportional exposure — attention tracks relevance linearly across all tiers.',
+      't = 2.0–2.5: square-root compression — long-tail providers gain substantially.',
+      't → ∞: uniform redistribution. Each item tier receives equal attention regardless of relevance rank. In practice, t = 2–3 already achieves most of this effect.'
+    ];
+    const idx=Math.min(4,Math.floor(blend*5));
+    document.getElementById('ot-caption').textContent=captions[idx];
+  };
+  drawOTSlider(0);
+})();
+
+(function(){
+  const N=60, MONTHS=24, ALPHA=2.0;
+  const labels=Array.from({length:MONTHS+1},(_,i)=>'Month '+i);
+
+  function makeWeights(n){
+    return Array.from({length:n},(_,i)=>Math.pow(n-i,ALPHA));
+  }
+  function exposure(weights,t){
+    const taxed=t<0.01?weights.slice():weights.map(w=>Math.pow(w,1/t));
+    const sum=taxed.reduce((a,b)=>a+b,0);
+    return taxed.map(w=>w/sum);
+  }
+  function simulate(t,threshold){
+    let weights=makeWeights(N);
+    const counts=[N];
+    for(let m=0;m<MONTHS;m++){
+      const exp=exposure(weights,t);
+      const mean=exp.reduce((a,b)=>a+b,0)/exp.length;
+      const survived=weights.filter((_,i)=>exp[i]>=threshold*mean);
+      weights=makeWeights(survived.length);
+      counts.push(survived.length);
+      if(survived.length===0){while(counts.length<=MONTHS)counts.push(0);break;}
+    }
+    return counts;
+  }
+
+  // Plugin: draw end-of-line labels and starting reference line label
+  const endLabelPlugin={
+    id:'endLabel',
+    afterDraw(ch){
+      const ctx=ch.ctx;
+      // Reference line label
+      const refMeta=ch.getDatasetMeta(2);
+      if(refMeta&&refMeta.data.length){
+        const pt=refMeta.data[refMeta.data.length-1];
+        ctx.save();
+        ctx.fillStyle='#94a3b8';
+        ctx.font='11px '+font;
+        ctx.textAlign='right';
+        ctx.fillText('Start: '+N,pt.x-4,pt.y-6);
+        ctx.restore();
+      }
+      // Line end labels for datasets 0 and 1
+      [{idx:0,color:'#ef4444'},{idx:1,color:'#3b82f6'}].forEach(({idx,color})=>{
+        const meta=ch.getDatasetMeta(idx);
+        const data=ch.data.datasets[idx].data;
+        const lastVal=data[data.length-1];
+        if(!meta.data.length||lastVal===undefined) return;
+        const pt=meta.data[data.length-1];
+        ctx.save();
+        ctx.fillStyle=color;
+        ctx.font='bold 11px '+font;
+        ctx.textAlign='left';
+        // end-label removed
+        ctx.restore();
+      });
+    }
+  };
+
+  const chart=new Chart(document.getElementById('marketChart').getContext('2d'),{
+    type:'line',
+    data:{labels:labels,datasets:[
+      {label:'No redistribution (t=0)',data:simulate(0,0.15),
+       borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.07)',
+       borderWidth:2.5,pointRadius:2,fill:true,tension:0.3},
+      {label:'Redistributed ranking',data:simulate(1,0.15),
+       borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',
+       borderWidth:2.5,pointRadius:2,fill:true,tension:0.3},
+      {label:'Starting count',data:Array(MONTHS+1).fill(N),
+       borderColor:'#94a3b8',backgroundColor:'transparent',
+       borderWidth:1.5,borderDash:[5,4],pointRadius:0,fill:false,tension:0},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false},endLabel:{}},
+      scales:{
+        x:{title:{display:true,text:'Months',font:{family:font,size:11},color:C.gray},
+           ticks:{maxTicksLimit:13,font:{family:font,size:10},color:C.gray},grid:{color:C.grid}},
+        y:{title:{display:true,text:'Active providers',font:{family:font,size:11},color:C.gray},
+           ticks:{font:{family:font,size:10},color:C.gray},min:0,max:N+10,grid:{color:C.grid}}
+      }
+    },
+    plugins:[endLabelPlugin]
+  });
+
+  function update(){
+    const t=+document.getElementById('mktT').value/10;
+    const exitPct=+document.getElementById('mktExit').value/100;
+    document.getElementById('mktTVal').textContent='t='+t.toFixed(1);
+    document.getElementById('mktExitVal').textContent=(exitPct*100).toFixed(0)+'%';
+    document.getElementById('mktExitNote').textContent='A provider exits when receiving less than '+(exitPct*100).toFixed(0)+'% of what equal distribution would give them';
+
+    const bmCounts=simulate(0,exitPct);
+    const fairCounts=simulate(t,exitPct);
+    const bmFinal=bmCounts[MONTHS];
+    const fairFinal=fairCounts[MONTHS];
+    const saved=Math.max(0,fairFinal-bmFinal);
+
+    document.getElementById('mktBmCount').textContent=bmFinal+' of '+N;
+    document.getElementById('mktFairCount').textContent=fairFinal+' of '+N;
+    document.getElementById('mktSaved').textContent=saved;
+
+    chart.data.datasets[0].data=bmCounts;
+    chart.data.datasets[1].data=fairCounts;
+    chart.update();
+
+    const pctLost=Math.round((N-bmFinal)/N*100);
+    document.getElementById('mktCaption').textContent=
+      t<0.05
+        ? 'Both lines are identical — no redistribution applied. '+pctLost+'% of providers exit within 24 months.'
+        : bmFinal>=fairFinal
+          ? 'At t='+t.toFixed(1)+' the fair ranking performs similarly to no intervention at this exit threshold.'
+          : 'Without fairness, '+pctLost+'% of providers exit within 24 months. At t='+t.toFixed(1)+', '+saved+' more providers survive — sustaining the diversity that makes the platform valuable.';
+  }
+
+  document.getElementById('mktT').addEventListener('input',update);
+  document.getElementById('mktExit').addEventListener('input',update);
+
+  window.setMktT=function(v,btn){
+    document.getElementById('mktT').value=v;
+    document.querySelectorAll('[onclick^="setMktT"]').forEach(b=>{
+      b.style.borderColor='#e2e8f0';b.style.color='#64748b';b.style.background='#fff';
+    });
+    if(btn){btn.style.borderColor='#3b82f6';btn.style.color='#3b82f6';btn.style.background='#eff6ff';}
+    update();
+  };
+
+  update();
+})();
+</script>
+<script>
+document.addEventListener("DOMContentLoaded",function(){renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}],throwOnError:false});});
+</script>
+</body>
+</html>

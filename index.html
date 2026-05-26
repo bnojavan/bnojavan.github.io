@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" style="--maxContentWidth: 760px;">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Behnaz Nojavanasghari</title>
+  <meta
+    name="description"
+    content="Behnaz Nojavanasghari's personal website."
+  />
+  <style>
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-normal.DffTHwTe.woff2) format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-normal.CvMo8Nw_.woff2) format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-ext-wght-italic.DPWrcJIc.woff2) format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    @font-face {
+      font-family: "Petrona Variable";
+      font-style: italic;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url(https://pscanf.com/_astro/petrona-latin-wght-italic.Cxq2NBhc.woff2) format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: "Petrona Fallback";
+      font-style: normal;
+      font-weight: 100 900;
+      src: local("Georgia"), local("Times New Roman"), local("Liberation Serif");
+      size-adjust: 96%;
+      ascent-override: 88.62%;
+      descent-override: 27.89%;
+      line-gap-override: 0%;
+    }
+
+    @font-face {
+      font-family: "Petrona Fallback";
+      font-style: italic;
+      font-weight: 100 900;
+      src: local("Georgia Italic"), local("Times New Roman Italic"), local("Liberation Serif Italic");
+      size-adjust: 87.74%;
+      ascent-override: 97.79%;
+      descent-override: 30.77%;
+      line-gap-override: 0%;
+    }
+
+    :root {
+      --greys-0: #ffffff;
+      --greys-2: #f5f5f5;
+      --greys-4: #d9d9d9;
+      --greys-10: #1f1f1f;
+      --violets-5: #6741d9;
+      --oranges-3: #ffa94d;
+    }
+
+    html,
+    body {
+      font-family: "Petrona Variable", "Petrona Fallback", serif;
+      padding: 0;
+      margin: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      color: var(--greys-10);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+        radial-gradient(circle at top, #e8f3ea 0%, #eef2f7 40%, #f8f6f0 100%);
+    }
+
+    main {
+      max-width: var(--maxContentWidth);
+      margin-left: 2em;
+      margin-right: 2em;
+    }
+
+    .profile-image-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 3em;
+      margin-bottom: 3em;
+    }
+
+    .profile-picture {
+      --profile-picture-radius: 38% 62% 47% 53% / 59% 36% 64% 41%;
+      border: 9px solid var(--violets-5);
+      border-radius: var(--profile-picture-radius);
+      display: block;
+      height: 250px;
+      overflow: hidden;
+      width: 250px;
+    }
+
+    .profile-picture img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 32%;
+    }
+
+    .intro-text-container {
+      font-size: 1.7em;
+      line-height: 1.35em;
+      padding-bottom: 2em;
+    }
+
+    .intro-text-container p {
+      margin-top: 1em;
+      margin-bottom: 1em;
+    }
+
+    .intro-text-container a,
+    .intro-text-container a:visited,
+    nav a,
+    nav a:visited {
+      color: var(--violets-5);
+    }
+
+    nav {
+      margin-top: 1.5em;
+      padding-bottom: 3em;
+      font-size: 1.1em;
+      font-style: italic;
+    }
+
+    nav .separator {
+      margin: 0 0.7em;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        color: var(--greys-2);
+        background:
+          linear-gradient(rgba(0, 0, 0, 0.56), rgba(0, 0, 0, 0.56)),
+          radial-gradient(circle at top, #2d382f 0%, #1e2430 45%, #171513 100%);
+      }
+
+      .profile-picture {
+        border-color: var(--oranges-3);
+      }
+
+      .intro-text-container a,
+      .intro-text-container a:visited,
+      nav a,
+      nav a:visited {
+        color: var(--oranges-3);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="profile-image-container">
+      <div class="profile-picture">
+        <img src="1000038445.jpg" alt="Behnaz Nojavanasghari's profile picture" />
+      </div>
+    </div>
+
+    <div class="intro-text-container">
+      <p>Hi!</p>
+
+      <p>
+        I’m Behnaz, an AI/ML leader based in the San Francisco Bay Area focused
+        on search, recommendation systems, personalization, and AI-first
+        products.
+      </p>
+
+      <p>
+        Over the years I’ve led machine learning initiatives across
+        product-driven environments spanning search, recommendations,
+        advertising, and health tech. My work focuses on building and scaling
+        end-to-end ML systems from research to production, translating technical
+        strategy into measurable business impact, and growing strong teams that
+        can own complex systems over time.
+      </p>
+
+      <p>
+        More recently, I’ve been especially interested in multimodal machine
+        learning, generative AI, and agentic AI. I also
+        <a href="s/index.html">write about marketplace ranking and recommendation systems</a>.
+      </p>
+
+      <p>
+        Connect with me on
+        <a href="https://www.linkedin.com/in/behnaznojavan/">LinkedIn</a>.
+      </p>
+    </div>
+
+    <nav aria-label="Footer navigation">
+      <a href="s/index.html">Read articles</a>
+      <span class="separator" aria-hidden="true">&bull;</span>
+      <a href="https://www.linkedin.com/in/behnaznojavan/">LinkedIn</a>
+    </nav>
+  </main>
+</body>
+</html>
